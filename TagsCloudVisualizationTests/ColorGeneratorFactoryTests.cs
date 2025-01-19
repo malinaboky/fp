@@ -36,6 +36,6 @@ public class ColorGeneratorFactoryTests
     {
         var colorGeneratorFactory = Scope.Resolve<ColorGeneratorFactory>();
 
-        colorGeneratorFactory.GetColorGenerator(option).Should().BeOfType(expectedType);
+        colorGeneratorFactory.GetColorGenerator(option).GetValueOrThrow().Should().BeOfType(expectedType);
     }
 }

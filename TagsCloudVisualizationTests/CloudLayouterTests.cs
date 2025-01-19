@@ -3,6 +3,7 @@ using FluentAssertions;
 using TagsCloudVisualization.ConsoleCommands;
 using TagsCloudVisualization.Distributors;
 using TagsCloudVisualization.Domain;
+using TagsCloudVisualization.FuncMonad;
 using TagsCloudVisualization.Layouters;
 using TagsCloudVisualization.Layouters.RectangleSizeCalculators;
 using TagsCloudVisualization.WordPreprocessors.FontCreators;
@@ -73,7 +74,7 @@ public class CloudLayouterTests
             .Returns(new Font("Arial", 12, FontStyle.Regular));
         Mock.Arrange(() => FakeRectangleSizeCalculator.ConvertWordToRectangleSize(Arg.AnyString, Arg.IsAny<Font>()))
             .ReturnsMany(Enumerable.Range(0, wordCount)
-                .Select(_ => new Size(10, 10))
+                .Select(_ => new Size(10, 10).AsResult())
                 .ToArray());
 
         var tags = Layouter.CreateTagsCloud(

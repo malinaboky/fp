@@ -24,13 +24,15 @@ public class CircularCloudLayouter : ICloudLayouter
     
     public Result<IEnumerable<Tag>> CreateTagsCloud(IEnumerable<Tuple<string, int>> wordsCollection)
     {
-        return Result.Of(() => FillLayouter(wordsCollection));
+        return wordsCollection.Any() 
+            ? FillLayouter(wordsCollection)
+            : Result.Fail<IEnumerable<Tag>>("List of words is empty after preprocessing the words.");
     }
     
-    private Rectangle GetNextRectangle(List<Tag> tags, Size rectangleSize)
+    private Result<Rectangle> GetNextRectangle(List<Tag> tags, Size rectangleSize)
     {
         if (rectangleSize.Width <= 0 || rectangleSize.Height <= 0)
-            throw new ArgumentException("The rectangle size must be greater than zero.");
+            return Result.Fail<Rectangle>("The rectangle size must be greater than zero.");
         
         var newRectangle = new Rectangle(distribution.GetNextPoint(), rectangleSize);
         
@@ -40,7 +42,7 @@ public class CircularCloudLayouter : ICloudLayouter
         return newRectangle;
     }
 
-    private IEnumerable<Tag> FillLayouter(IEnumerable<Tuple<string, int>> wordsCollection)
+    private Result<IEnumerable<Tag>> FillLayouter(IEnumerable<Tuple<string, int>> wordsCollection)
     {
         List<Tag> tags = [];
         var maxWordCount = wordsCollection.First().Item2;
@@ -49,10 +51,14 @@ public class CircularCloudLayouter : ICloudLayouter
         foreach (var (word, wordCount) in wordsCollection)
         {
             var tagFont = fontCreator.CreateFont(wordCount, minWordCount, maxWordCount);
-            var rectangleSize = rectangleSizeCalculator.ConvertWordToRectangleSize(word, tagFont);
-            var rectangle = GetNextRectangle(tags, rectangleSize);
+            var rectangle = tagFont
+                .Then(font => rectangleSizeCalculator.ConvertWordToRectangleSize(word, font))
+                .Then(size => GetNextRectangle(tags, size));
             
-            tags.Add(new Tag(rectangle, tagFont, word));
+            if (!rectangle.IsSuccess)
+                return Result.Fail<IEnumerable<Tag>>(rectangle.Error);
+                
+            tags.Add(new Tag(rectangle.GetValueOrThrow(), tagFont.GetValueOrThrow(), word));
         }
         
         return tags;

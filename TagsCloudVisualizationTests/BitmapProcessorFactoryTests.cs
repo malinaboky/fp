@@ -42,6 +42,6 @@ public class BitmapProcessorFactoryTests
     {
         var bitmapFactory = Scope.Resolve<BitmapProcessorFactory>();
 
-        bitmapFactory.GetBitmapProcessor(option).Should().BeOfType(expectedType);
+        bitmapFactory.GetBitmapProcessor(option).GetValueOrThrow().Should().BeOfType(expectedType);
     }
 }

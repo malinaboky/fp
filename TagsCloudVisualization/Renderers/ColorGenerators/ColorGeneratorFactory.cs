@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using TagsCloudVisualization.Enums;
+using TagsCloudVisualization.FuncMonad;
 
 namespace TagsCloudVisualization.Renderers.ColorGenerators;
 
@@ -10,11 +11,10 @@ public class ColorGeneratorFactory
     public ColorGeneratorFactory(IComponentContext context)
         => this.context = context;
 
-    public IColorGenerator GetColorGenerator(ColorOption option)
+    public Result<IColorGenerator> GetColorGenerator(ColorOption option)
     {
-        if (context.IsRegisteredWithKey<IColorGenerator>(option))
-            return context.ResolveKeyed<IColorGenerator>(option);
-
-        throw new NotSupportedException($"Color generator {option.ToString()} is not supported.");
+        return context.IsRegisteredWithKey<IColorGenerator>(option) 
+            ? Result.Ok(context.ResolveKeyed<IColorGenerator>(option)) 
+            : Result.Fail<IColorGenerator>($"Color generator {option.ToString()} is not supported.");
     }
 }

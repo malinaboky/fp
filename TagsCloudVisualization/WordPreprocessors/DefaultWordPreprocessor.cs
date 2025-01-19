@@ -27,7 +27,8 @@ public class DefaultWordPreprocessor : IWordPreprocessor
     }
     
     private Result<string[]> GetMorphologicalAnalysis(string text) 
-        => Result.Of(() => myStem.Analysis(text).Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+        => myStem.Analysis(text)
+            .Then(result => result.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
             .RefineError("Error connecting to MyStem");
 
     private Dictionary<string, int> GetStatisticsOnWords(string[] analysis)

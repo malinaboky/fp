@@ -11,21 +11,28 @@ public class DefaultRenderer(ColorGeneratorFactory colorGeneratorFactory,
     BitmapProcessorFactory bitmapProcessorFactory,
     Options options) : ICloudRenderer
 {
-    private readonly IColorGenerator colorGenerator = colorGeneratorFactory.GetColorGenerator(options.ColorOption);
-    private readonly IBitmapProcessor bitmapProcessor = bitmapProcessorFactory.GetBitmapProcessor(options.ImageFormat);
+    private readonly Result<IColorGenerator> colorGenerator = colorGeneratorFactory.GetColorGenerator(options.ColorOption);
+    private readonly Result<IBitmapProcessor> bitmapProcessor = bitmapProcessorFactory.GetBitmapProcessor(options.ImageFormat);
     private readonly string outputDirectory = options.OutputDirectory;
     private readonly Size imageSize = new(options.ImageWidth, options.ImageHeight);
     private readonly Color backgroundColor = Color.FromName(options.BackgroundColor);
 
     public Result<None> Render(IEnumerable<Tag> tags)
     {
+        if (!colorGenerator.IsSuccess)
+            return Result.Fail<None>(colorGenerator.Error);
+        
+        if (!bitmapProcessor.IsSuccess)
+            return Result.Fail<None>(bitmapProcessor.Error);
+        
         return !tags.Any() 
             ? Result.Fail<None>("The cloud layout is empty")
             : Result.OfAction(() => 
                 {
                     using var bitmap = new Bitmap(imageSize.Width, imageSize.Height);
                     CreateBitmap(bitmap, tags);
-                    bitmapProcessor.SaveImage(bitmap, outputDirectory, $"cloud_{tags.Count()}");
+                    bitmapProcessor.GetValueOrThrow()
+                        .SaveImage(bitmap, outputDirectory, $"cloud_{tags.Count()}");
                 });
     }
     
@@ -36,7 +43,7 @@ public class DefaultRenderer(ColorGeneratorFactory colorGeneratorFactory,
         graphic.Clear(backgroundColor);
         foreach (var tag in tags)
         {
-            var color = colorGenerator.GetColor();
+            var color = colorGenerator.GetValueOrThrow().GetColor();
             var brush = new SolidBrush(color);
             graphic.DrawString(tag.Content, tag.Font, brush, tag.Rectangle.Location);
         }

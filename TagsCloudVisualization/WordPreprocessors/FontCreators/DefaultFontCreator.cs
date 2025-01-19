@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using TagsCloudVisualization.ConsoleCommands;
+using TagsCloudVisualization.FuncMonad;
 
 namespace TagsCloudVisualization.WordPreprocessors.FontCreators;
 
@@ -16,11 +17,13 @@ public class DefaultFontCreator : IFontCreator
         minFontSize = options.MinTagsFontSize;
     }
     
-    public Font CreateFont(int fontSizeFactor, int minWordCount, int maxWordCount)
+    public Result<Font> CreateFont(int fontSizeFactor, int minWordCount, int maxWordCount)
     {
-        return minWordCount == maxWordCount 
-            ? new Font(fontName, Math.Min(Math.Max(minFontSize, fontSizeFactor), maxFontSize)) 
-            : new Font(fontName, NormalizeFontSize(fontSizeFactor, minWordCount, maxWordCount));
+        return Result.Of(() =>
+            minWordCount == maxWordCount
+                ? new Font(fontName, Math.Min(Math.Max(minFontSize, fontSizeFactor), maxFontSize))
+                : new Font(fontName, NormalizeFontSize(fontSizeFactor, minWordCount, maxWordCount))
+        );
     }
 
     private int NormalizeFontSize(int fontSizeFactor, int minWordCount, int maxWordCount)

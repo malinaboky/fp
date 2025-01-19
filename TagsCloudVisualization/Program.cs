@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection;
 using Autofac;
 using CommandLine;
+using CommandLine.Text;
 using TagsCloudVisualization.App;
 using TagsCloudVisualization.FuncMonad;
 using Options = TagsCloudVisualization.ConsoleCommands.Options;
@@ -12,62 +12,43 @@ public class Program
 {
     static void Main(string[] args)
     {
-        Parser.Default.ParseArguments<Options>(args)
-            .WithParsed(opts =>
+        var parserResult = Parser.Default.ParseArguments<Options>(args);
+        
+        parserResult.WithParsed(opts =>
             {
-                if (!IsValidOptions(opts))
-                    return;
+                if (!TryValidateOptions(opts, out var errors))
+                {
+                    var helpText = HelpText.AutoBuild(parserResult, h => h, e => e)
+                        .AddPreOptionsLines(errors);
+                    Console.WriteLine(helpText);
+                    Environment.Exit(2);
+                }
                 
-                Result.OfAction(() => 
-                    { 
-                        var container = ContainerConfig.Configure(opts);
-                        using var scope = container.BeginLifetimeScope();
-                        scope.Resolve<IApp>().Run();
-                    })
-                    .OnFail(Console.WriteLine);
-            });
+                var container = ContainerConfig.Configure(opts);
+                using var scope = container.BeginLifetimeScope();
+                scope.Resolve<IApp>()
+                    .Run()
+                    .OnFail(error =>
+                    {
+                        Console.WriteLine(error);
+                        Environment.Exit(1);
+                    });
+            })
+            .WithNotParsed(_ => Environment.Exit(2));
     }
 
-    private static bool IsValidOptions(Options options)
+    private static bool TryValidateOptions(Options options, out List<string> errors)
     {
         var validationResults = new List<ValidationResult>();
         var validationContext = new ValidationContext(options);
+        errors = [];
 
         if (Validator.TryValidateObject(options, validationContext, validationResults, true)) 
             return true;
 
-        Console.WriteLine("ERROR(S):");
-        
-        foreach (var validationResult in validationResults)
-            Console.WriteLine($"  {validationResult.ErrorMessage}");
-        
-        PrintHelp<Options>();
-        
+        errors.Add("\nERROR(S):");
+        errors.AddRange(validationResults.Select(validationResult => $"  {validationResult.ErrorMessage}"));
+
         return false;
-    }
-    
-    private static void PrintHelp<T>()
-    {
-        Console.WriteLine();
-        var type = typeof(T);
-        var properties = type.GetProperties();
-
-        foreach (var property in properties)
-        {
-            var optionAttribute = property.GetCustomAttribute<OptionAttribute>();
-            
-            if (optionAttribute == null) 
-                continue;
-            
-            var shortName = !string.IsNullOrEmpty(optionAttribute.ShortName) 
-                ? $"-{optionAttribute.ShortName}, " 
-                : string.Empty;
-            var longName = $"--{optionAttribute.LongName}";
-            var helpText = optionAttribute.HelpText;
-            var required = optionAttribute.Required ? "Required. " : string.Empty;
-            var defaultValue = optionAttribute.Default != null ? $"(Default: {optionAttribute.Default}) " : string.Empty;
-
-            Console.WriteLine($"  {shortName}{longName}    {required}{defaultValue}{helpText}\n");
-        }
     }
 }

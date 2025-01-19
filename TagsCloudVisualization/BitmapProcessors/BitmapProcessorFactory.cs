@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using TagsCloudVisualization.Enums;
+using TagsCloudVisualization.FuncMonad;
 
 namespace TagsCloudVisualization.BitmapProcessors;
 
@@ -10,11 +11,10 @@ public class BitmapProcessorFactory
     public BitmapProcessorFactory(IComponentContext context)
         => this.context = context;
 
-    public IBitmapProcessor GetBitmapProcessor(OutputImageFormat option)
+    public Result<IBitmapProcessor> GetBitmapProcessor(OutputImageFormat option)
     {
-        if (context.IsRegisteredWithKey<IBitmapProcessor>(option))
-            return context.ResolveKeyed<IBitmapProcessor>(option);
-
-        throw new NotSupportedException($"Image format {option.ToString()} is not supported.");
+        return context.IsRegisteredWithKey<IBitmapProcessor>(option) 
+            ? Result.Ok(context.ResolveKeyed<IBitmapProcessor>(option)) 
+            : Result.Fail<IBitmapProcessor>($"Image format {option.ToString()} is not supported.");
     }
 }

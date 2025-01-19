@@ -48,7 +48,7 @@ public class BitmapProcessorTests
         var expectedPath = Path.Combine(directory, $"{imageName}.{expected}");
         var bitmapFactory = Scope.Resolve<BitmapProcessorFactory>();
 
-        bitmapFactory.GetBitmapProcessor(format).SaveImage(new Bitmap(1, 1), directory, imageName);
+        bitmapFactory.GetBitmapProcessor(format).GetValueOrThrow().SaveImage(new Bitmap(1, 1), directory, imageName);
         
         File.Exists(expectedPath);
     }
